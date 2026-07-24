@@ -365,7 +365,6 @@ POST /report
 - Audio Evidence Processing
 - Face Recognition
 - Evidence Relationship Graph
-- AWS Deployment
 - Multi-user Authentication
 - Case Management System
 
