@@ -335,7 +335,7 @@ POST /report
 
 ## AI Analysis
 
-![Ai Analysis](screenshots/ai analysis.png)
+![Ai Analysis](screenshots/aianalysis.png)
 
 ---
 
