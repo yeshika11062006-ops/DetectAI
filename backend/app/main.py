@@ -37,6 +37,7 @@ app.add_middleware(
     allow_origins=[
         # EC2 Frontend
         "http://16.16.172.240:5173",
+        "http://16.16.172.240"
 
         # Local Development
         "http://localhost:5173",
