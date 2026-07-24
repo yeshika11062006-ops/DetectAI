@@ -1,0 +1,21 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/*.db
+backend/uploads/
+backend/reports/
+
+# Environment
+backend/.env
+
+# Node
+frontend/node_modules/
+
+# Vite
+frontend/dist/
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
