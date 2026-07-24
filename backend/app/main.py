@@ -1,4 +1,3 @@
-from app.routes.report import router as report_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,6 +16,7 @@ from app.routes.cases import router as case_router
 from app.routes.upload import router as upload_router
 from app.routes.ai import router as ai_router
 from app.routes.chat import router as chat_router
+from app.routes.report import router as report_router
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -29,10 +29,16 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS
+# -----------------------------
+# CORS Configuration
+# -----------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        # EC2 Frontend
+        "http://16.16.172.240:5173",
+
+        # Local Development
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5175",
@@ -51,6 +57,7 @@ app.include_router(upload_router)
 app.include_router(ai_router)
 app.include_router(chat_router)
 app.include_router(report_router)
+
 
 @app.get("/", tags=["Root"])
 def root():
