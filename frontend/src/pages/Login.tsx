@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { login } from "../api/auth";
 
 import {
@@ -255,6 +255,22 @@ const handleLogin = async () => {
                 number="96%"
                 label="Accuracy"
               />
+              <div className="mt-8 text-center">
+
+  <p className="text-slate-400">
+
+    Don't have an account?
+
+    <Link
+      to="/register"
+      className="ml-2 font-semibold text-cyan-400 hover:text-cyan-300"
+    >
+      Create Account
+    </Link>
+
+  </p>
+
+</div>
 
             </div>
 
@@ -265,6 +281,7 @@ const handleLogin = async () => {
       </div>
 
     </div>
+    
 
   );
 }
