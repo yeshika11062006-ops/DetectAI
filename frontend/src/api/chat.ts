@@ -1,12 +1,10 @@
-import axios from "axios";
-
-const API = "http://localhost:8000";
+import api from "./api";
 
 export async function chatWithEvidence(
   evidence: string,
   question: string
 ) {
-  const response = await axios.post(`${API}/chat`, {
+  const response = await api.post("/chat", {
     evidence,
     question,
   });

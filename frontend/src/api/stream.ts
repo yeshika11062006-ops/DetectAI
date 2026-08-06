@@ -1,10 +1,10 @@
-const API = "http://localhost:8000";
+import api from "./api";
 
 export async function streamAnalysis(
   text: string,
   onChunk: (chunk: string) => void
 ) {
-  const response = await fetch(`${API}/ai/stream`, {
+  const response = await fetch(`${api.defaults.baseURL}/ai/stream`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
