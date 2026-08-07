@@ -18,16 +18,11 @@ router = APIRouter(
     tags=["Upload"],
 )
 
-
 UPLOAD_FOLDER = "uploads"
 
-os.makedirs(
-    UPLOAD_FOLDER,
-    exist_ok=True,
-)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-# Allowed evidence file types
 ALLOWED_EXTENSIONS = {
     "pdf",
     "jpg",
@@ -38,34 +33,27 @@ ALLOWED_EXTENSIONS = {
 }
 
 
-def extract_text(filepath: str):
+def extract_text(filepath: str) -> str:
 
-    extension = filepath.split(".")[-1].lower()
+    extension = filepath.rsplit(".", 1)[-1].lower()
 
-    # ---------------- TXT ----------------
-
+    # TXT
     if extension == "txt":
-
         with open(
             filepath,
             "r",
             encoding="utf-8",
             errors="ignore",
         ) as f:
-
             return f.read()
 
-
-    # ---------------- PDF ----------------
-
-    elif extension == "pdf":
-
+    # PDF
+    if extension == "pdf":
         reader = PdfReader(filepath)
 
         text = ""
 
         for page in reader.pages:
-
             page_text = page.extract_text()
 
             if page_text:
@@ -73,34 +61,32 @@ def extract_text(filepath: str):
 
         return text
 
-
-    # ---------------- DOCX ----------------
-
-    elif extension == "docx":
-
+    # DOCX
+    if extension == "docx":
         document = Document(filepath)
 
         text = ""
 
-        for para in document.paragraphs:
-
-            text += para.text + "\n"
+        for paragraph in document.paragraphs:
+            text += paragraph.text + "\n"
 
         return text
 
+    # JPG / JPEG / PNG
+    if extension in {"jpg", "jpeg", "png"}:
 
-    # ---------------- IMAGE OCR ----------------
+        try:
+            image = Image.open(filepath)
+            image = image.convert("RGB")
 
-    elif extension in [
-        "jpg",
-        "jpeg",
-        "png",
-    ]:
+            text = pytesseract.image_to_string(image)
 
-        image = Image.open(filepath)
+            return text
 
-        return pytesseract.image_to_string(image)
-
+        except Exception as e:
+            raise RuntimeError(
+                f"Image OCR failed: {str(e)}"
+            )
 
     return ""
 
@@ -110,32 +96,31 @@ async def upload_file(
     file: UploadFile = File(...)
 ):
 
-    # Check filename
     if not file.filename:
-
         raise HTTPException(
             status_code=400,
             detail="No file selected.",
         )
 
+    original_name = file.filename
 
-    # Get extension
-    extension = file.filename.split(".")[-1].lower()
+    if "." not in original_name:
+        raise HTTPException(
+            status_code=400,
+            detail="File must have an extension.",
+        )
 
+    extension = original_name.rsplit(".", 1)[-1].lower()
 
-    # Check supported file type
     if extension not in ALLOWED_EXTENSIONS:
-
         raise HTTPException(
             status_code=400,
             detail=(
                 "Unsupported file type. "
-                "Allowed files: PDF, JPG, JPEG, PNG, TXT and DOCX."
+                "Allowed: PDF, JPG, JPEG, PNG, TXT, DOCX."
             ),
         )
 
-
-    # Generate unique filename
     filename = f"{uuid4()}.{extension}"
 
     filepath = os.path.join(
@@ -143,12 +128,9 @@ async def upload_file(
         filename,
     )
 
-
-    # Save uploaded file
     try:
 
         with open(filepath, "wb") as buffer:
-
             shutil.copyfileobj(
                 file.file,
                 buffer,
@@ -161,37 +143,30 @@ async def upload_file(
             detail=f"Failed to save file: {str(e)}",
         )
 
-
-    # Extract text
     try:
 
         text = extract_text(filepath)
 
     except Exception as e:
 
-        # Remove failed upload
         if os.path.exists(filepath):
             os.remove(filepath)
 
         raise HTTPException(
             status_code=400,
-            detail=f"Unable to process this file: {str(e)}",
+            detail=str(e),
         )
 
-
-    # Make sure text was extracted
     if not text or not text.strip():
 
         raise HTTPException(
             status_code=400,
             detail=(
-                "Unable to extract text from this file. "
-                "For images, please upload a clear JPG or PNG picture."
+                "No readable text was found in this file. "
+                "For images, upload a clear JPG or PNG image."
             ),
         )
 
-
-    # AI analysis
     try:
 
         analysis = analyze_document(text)
@@ -203,15 +178,9 @@ async def upload_file(
             detail=f"AI analysis failed: {str(e)}",
         )
 
-
     return {
-
         "filename": filename,
-
-        "original_name": file.filename,
-
+        "original_name": original_name,
         "message": "Uploaded successfully",
-
         "analysis": analysis,
-
     }
