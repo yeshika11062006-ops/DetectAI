@@ -18,12 +18,24 @@ router = APIRouter(
     tags=["Upload"],
 )
 
+
 UPLOAD_FOLDER = "uploads"
 
 os.makedirs(
     UPLOAD_FOLDER,
     exist_ok=True,
 )
+
+
+# Allowed evidence file types
+ALLOWED_EXTENSIONS = {
+    "pdf",
+    "jpg",
+    "jpeg",
+    "png",
+    "txt",
+    "docx",
+}
 
 
 def extract_text(filepath: str):
@@ -43,6 +55,7 @@ def extract_text(filepath: str):
 
             return f.read()
 
+
     # ---------------- PDF ----------------
 
     elif extension == "pdf":
@@ -60,6 +73,7 @@ def extract_text(filepath: str):
 
         return text
 
+
     # ---------------- DOCX ----------------
 
     elif extension == "docx":
@@ -74,26 +88,54 @@ def extract_text(filepath: str):
 
         return text
 
+
     # ---------------- IMAGE OCR ----------------
 
     elif extension in [
-        "png",
         "jpg",
         "jpeg",
+        "png",
     ]:
 
         image = Image.open(filepath)
 
         return pytesseract.image_to_string(image)
 
+
     return ""
 
 
-@router.post("/")
-async def upload_file(file: UploadFile = File(...)):
+@router.post("")
+async def upload_file(
+    file: UploadFile = File(...)
+):
 
-    extension = file.filename.split(".")[-1]
+    # Check filename
+    if not file.filename:
 
+        raise HTTPException(
+            status_code=400,
+            detail="No file selected.",
+        )
+
+
+    # Get extension
+    extension = file.filename.split(".")[-1].lower()
+
+
+    # Check supported file type
+    if extension not in ALLOWED_EXTENSIONS:
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Unsupported file type. "
+                "Allowed files: PDF, JPG, JPEG, PNG, TXT and DOCX."
+            ),
+        )
+
+
+    # Generate unique filename
     filename = f"{uuid4()}.{extension}"
 
     filepath = os.path.join(
@@ -101,23 +143,66 @@ async def upload_file(file: UploadFile = File(...)):
         filename,
     )
 
-    with open(filepath, "wb") as buffer:
 
-        shutil.copyfileobj(
-            file.file,
-            buffer,
+    # Save uploaded file
+    try:
+
+        with open(filepath, "wb") as buffer:
+
+            shutil.copyfileobj(
+                file.file,
+                buffer,
+            )
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save file: {str(e)}",
         )
 
-    text = extract_text(filepath)
 
-    if not text.strip():
+    # Extract text
+    try:
+
+        text = extract_text(filepath)
+
+    except Exception as e:
+
+        # Remove failed upload
+        if os.path.exists(filepath):
+            os.remove(filepath)
 
         raise HTTPException(
             status_code=400,
-            detail="Unable to extract text from this file.",
+            detail=f"Unable to process this file: {str(e)}",
         )
 
-    analysis = analyze_document(text)
+
+    # Make sure text was extracted
+    if not text or not text.strip():
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Unable to extract text from this file. "
+                "For images, please upload a clear JPG or PNG picture."
+            ),
+        )
+
+
+    # AI analysis
+    try:
+
+        analysis = analyze_document(text)
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI analysis failed: {str(e)}",
+        )
+
 
     return {
 
@@ -128,4 +213,5 @@ async def upload_file(file: UploadFile = File(...)):
         "message": "Uploaded successfully",
 
         "analysis": analysis,
+
     }
