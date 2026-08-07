@@ -16,7 +16,6 @@ export default function Register() {
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
-
     setError("");
 
     if (password !== confirmPassword) {
@@ -31,32 +30,30 @@ export default function Register() {
 
       alert("Registration successful!");
 
-      // Redirect to Login page
       navigate("/");
-
     } catch (err: any) {
-      setError(
-        err.response?.data?.detail ||
-        "Registration failed"
-      );
+      console.error("Registration error:", err);
+
+      const message =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Registration failed";
+
+      setError(message);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-6">
-
+    <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6">
       <form
         onSubmit={handleRegister}
         className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-10 backdrop-blur-xl"
       >
-
         <div className="mb-8 flex justify-center">
-          <ShieldCheck
-            size={60}
-            className="text-cyan-400"
-          />
+          <ShieldCheck size={60} className="text-cyan-400" />
         </div>
 
         <h1 className="mb-2 text-center text-4xl font-black text-white">
@@ -129,9 +126,7 @@ export default function Register() {
             Login
           </Link>
         </div>
-
       </form>
-
     </div>
   );
 }

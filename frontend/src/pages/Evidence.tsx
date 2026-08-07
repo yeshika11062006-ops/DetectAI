@@ -13,8 +13,24 @@ import { downloadReport } from "../api/report";
 import { chatWithEvidence } from "../api/chat";
 import { streamAnalysis } from "../api/stream";
 
+type TimelineItem = {
+  date: string;
+  event: string;
+};
+
+type Analysis = {
+  summary?: string;
+  people?: string[];
+  organizations?: string[];
+  locations?: string[];
+  dates?: string[];
+  keywords?: string[];
+  insights?: string[];
+  timeline?: TimelineItem[];
+};
+
 export default function Evidence() {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
 
@@ -22,13 +38,18 @@ export default function Evidence() {
 
   const [message, setMessage] = useState("");
 
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysis, setAnalysis] =
+    useState<Analysis | null>(null);
 
   const [streamText, setStreamText] = useState("");
 
   const [question, setQuestion] = useState("");
 
   const [answer, setAnswer] = useState("");
+
+  // ---------------------------------------------------
+  // UPLOAD + AI ANALYSIS
+  // ---------------------------------------------------
 
   async function handleUpload() {
     if (!file) return;
@@ -42,11 +63,17 @@ export default function Evidence() {
 
       setAnalysis(null);
 
+      setAnswer("");
+
       const data = await uploadEvidence(file);
 
       setMessage(
         `✅ ${data.original_name} uploaded successfully`
       );
+
+      // ------------------------------------------------
+      // STREAMING AI RESPONSE
+      // ------------------------------------------------
 
       if (data.text) {
         await streamAnalysis(
@@ -57,8 +84,19 @@ export default function Evidence() {
         );
       }
 
+      // ------------------------------------------------
+      // REAL AI ANALYSIS
+      // ------------------------------------------------
+
       if (data.analysis) {
         setAnalysis(data.analysis);
+
+        // Save the real AI analysis so Timeline.tsx
+        // can display it after navigating away.
+        localStorage.setItem(
+          "detectai_analysis",
+          JSON.stringify(data.analysis)
+        );
       }
 
       setFile(null);
@@ -73,8 +111,12 @@ export default function Evidence() {
     }
   }
 
+  // ---------------------------------------------------
+  // CHAT WITH EVIDENCE
+  // ---------------------------------------------------
+
   async function handleChat() {
-    if (!analysis || !question) return;
+    if (!analysis || !question.trim()) return;
 
     try {
       const result = await chatWithEvidence(
@@ -84,14 +126,18 @@ export default function Evidence() {
 
       setAnswer(result.answer);
 
-    } catch {
+    } catch (error) {
+      console.error(error);
 
       setAnswer(
         "Unable to generate answer."
       );
-
     }
   }
+
+  // ---------------------------------------------------
+  // DOWNLOAD REPORT
+  // ---------------------------------------------------
 
   async function handleDownload() {
     if (!analysis) return;
@@ -119,39 +165,46 @@ export default function Evidence() {
 
       window.URL.revokeObjectURL(url);
 
-    } catch {
+    } catch (error) {
+      console.error(error);
 
       alert(
         "Failed to generate report."
       );
-
     }
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-10 text-white">
+    <div className="space-y-8">
 
-      <h1 className="mb-8 text-5xl font-black">
-        Evidence Upload
-      </h1>
+      {/* HEADER */}
+
+      <div>
+        <h1 className="mb-8 text-5xl font-black text-white">
+          Evidence Upload
+        </h1>
+      </div>
+
+      {/* UPLOAD CARD */}
 
       <div className="mx-auto max-w-4xl rounded-3xl border border-white/10 bg-white/5 p-10">
 
-        <div className="mb-8 flex justify-center">
+        {/* ICON */}
 
+        <div className="mb-8 flex justify-center">
           <Upload
             size={70}
             className="text-cyan-400"
           />
-
         </div>
 
-        {/* Hidden Input */}
+        {/* HIDDEN FILE INPUT */}
 
         <input
           ref={inputRef}
           type="file"
           className="hidden"
+          accept=".pdf,.txt,.doc,.docx,.png,.jpg,.jpeg"
           onChange={(e) =>
             setFile(
               e.target.files?.[0] || null
@@ -159,9 +212,10 @@ export default function Evidence() {
           }
         />
 
-        {/* Choose File */}
+        {/* CHOOSE FILE */}
 
         <button
+          type="button"
           onClick={() =>
             inputRef.current?.click()
           }
@@ -170,42 +224,50 @@ export default function Evidence() {
           📁 Choose Evidence File
         </button>
 
-        {/* Selected */}
+        {/* SELECTED FILE */}
 
         {file && (
           <div className="mb-6 flex items-center gap-3 rounded-xl bg-cyan-500/10 p-4">
 
             <FileText />
 
-            <span>{file.name}</span>
+            <span className="text-white">
+              {file.name}
+            </span>
 
           </div>
         )}
 
-        {/* Upload */}
+        {/* UPLOAD BUTTON */}
 
         <button
+          type="button"
           onClick={handleUpload}
           disabled={!file || loading}
-          className="w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 py-4 font-bold transition hover:scale-105 disabled:opacity-50"
+          className="w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 py-4 font-bold transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading
             ? "Uploading & Streaming..."
             : "Upload & Analyze"}
         </button>
 
-        {/* Success */}
+        {/* SUCCESS / ERROR */}
 
         {message && (
           <div className="mt-8 flex items-center gap-3 rounded-xl bg-green-500/20 p-4">
 
             <CheckCircle />
 
-            {message}
+            <span>
+              {message}
+            </span>
 
           </div>
         )}
-                {/* ---------------- STREAMING RESPONSE ---------------- */}
+
+        {/* -------------------------------------------- */}
+        {/* STREAMING RESPONSE */}
+        {/* -------------------------------------------- */}
 
         {streamText && (
           <div className="mt-10 rounded-2xl border border-cyan-500/20 bg-slate-900 p-8">
@@ -225,7 +287,9 @@ export default function Evidence() {
           </div>
         )}
 
-        {/* ---------------- ANALYSIS ---------------- */}
+        {/* -------------------------------------------- */}
+        {/* AI ANALYSIS */}
+        {/* -------------------------------------------- */}
 
         {analysis && (
 
@@ -235,133 +299,174 @@ export default function Evidence() {
               AI Investigation Analysis
             </h2>
 
-            {/* Summary */}
+            {/* SUMMARY */}
 
             <div className="mb-8">
 
-              <h3 className="mb-3 text-xl font-bold">
+              <h3 className="mb-3 text-xl font-bold text-white">
                 Investigation Summary
               </h3>
 
               <p className="leading-7 text-slate-300">
-                {analysis.summary}
+                {analysis.summary ||
+                  "No summary available."}
               </p>
 
             </div>
 
-            {/* People */}
+            {/* PEOPLE */}
 
             <div className="mb-8">
 
-              <h3 className="mb-3 text-xl font-bold">
+              <h3 className="mb-3 text-xl font-bold text-white">
                 People
               </h3>
 
-              <ul className="space-y-2">
-
-                {analysis.people?.map((person: string) => (
-
-                  <li key={person}>
-                    • {person}
-                  </li>
-
-                ))}
-
-              </ul>
+              {analysis.people &&
+              analysis.people.length > 0 ? (
+                <ul className="space-y-2">
+                  {analysis.people.map(
+                    (person) => (
+                      <li
+                        key={person}
+                        className="text-slate-300"
+                      >
+                        • {person}
+                      </li>
+                    )
+                  )}
+                </ul>
+              ) : (
+                <p className="text-slate-500">
+                  No people identified.
+                </p>
+              )}
 
             </div>
 
-            {/* Organizations */}
+            {/* ORGANIZATIONS */}
 
             <div className="mb-8">
 
-              <h3 className="mb-3 text-xl font-bold">
+              <h3 className="mb-3 text-xl font-bold text-white">
                 Organizations
               </h3>
 
-              <ul className="space-y-2">
-
-                {analysis.organizations?.map((org: string) => (
-
-                  <li key={org}>
-                    • {org}
-                  </li>
-
-                ))}
-
-              </ul>
+              {analysis.organizations &&
+              analysis.organizations.length > 0 ? (
+                <ul className="space-y-2">
+                  {analysis.organizations.map(
+                    (org) => (
+                      <li
+                        key={org}
+                        className="text-slate-300"
+                      >
+                        • {org}
+                      </li>
+                    )
+                  )}
+                </ul>
+              ) : (
+                <p className="text-slate-500">
+                  No organizations identified.
+                </p>
+              )}
 
             </div>
 
-            {/* Locations */}
+            {/* LOCATIONS */}
 
             <div className="mb-8">
 
-              <h3 className="mb-3 text-xl font-bold">
+              <h3 className="mb-3 text-xl font-bold text-white">
                 Locations
               </h3>
 
-              <ul className="space-y-2">
-
-                {analysis.locations?.map((loc: string) => (
-
-                  <li key={loc}>
-                    • {loc}
-                  </li>
-
-                ))}
-
-              </ul>
+              {analysis.locations &&
+              analysis.locations.length > 0 ? (
+                <ul className="space-y-2">
+                  {analysis.locations.map(
+                    (location) => (
+                      <li
+                        key={location}
+                        className="text-slate-300"
+                      >
+                        • {location}
+                      </li>
+                    )
+                  )}
+                </ul>
+              ) : (
+                <p className="text-slate-500">
+                  No locations identified.
+                </p>
+              )}
 
             </div>
 
-            {/* Dates */}
+            {/* DATES */}
 
             <div className="mb-8">
 
-              <h3 className="mb-3 text-xl font-bold">
+              <h3 className="mb-3 text-xl font-bold text-white">
                 Dates
               </h3>
 
-              <ul className="space-y-2">
-
-                {analysis.dates?.map((date: string) => (
-
-                  <li key={date}>
-                    • {date}
-                  </li>
-
-                ))}
-
-              </ul>
+              {analysis.dates &&
+              analysis.dates.length > 0 ? (
+                <ul className="space-y-2">
+                  {analysis.dates.map(
+                    (date) => (
+                      <li
+                        key={date}
+                        className="text-slate-300"
+                      >
+                        • {date}
+                      </li>
+                    )
+                  )}
+                </ul>
+              ) : (
+                <p className="text-slate-500">
+                  No dates identified.
+                </p>
+              )}
 
             </div>
 
-            {/* Keywords */}
+            {/* KEYWORDS */}
 
             <div className="mb-8">
 
-              <h3 className="mb-4 text-xl font-bold">
+              <h3 className="mb-4 text-xl font-bold text-white">
                 Keywords
               </h3>
 
-              <div className="flex flex-wrap gap-3">
+              {analysis.keywords &&
+              analysis.keywords.length > 0 ? (
+                <div className="flex flex-wrap gap-3">
 
-                {analysis.keywords?.map((keyword: string) => (
+                  {analysis.keywords.map(
+                    (keyword) => (
+                      <span
+                        key={keyword}
+                        className="rounded-full bg-cyan-500/20 px-4 py-2 text-cyan-300"
+                      >
+                        {keyword}
+                      </span>
+                    )
+                  )}
 
-                  <span
-                    key={keyword}
-                    className="rounded-full bg-cyan-500/20 px-4 py-2"
-                  >
-                    {keyword}
-                  </span>
-
-                ))}
-
-              </div>
+                </div>
+              ) : (
+                <p className="text-slate-500">
+                  No keywords identified.
+                </p>
+              )}
 
             </div>
-                        {/* Investigation Insights */}
+
+            {/* INVESTIGATION INSIGHTS */}
 
             <div className="mb-8">
 
@@ -369,61 +474,80 @@ export default function Evidence() {
                 Investigation Insights
               </h3>
 
-              <ul className="space-y-3">
+              {analysis.insights &&
+              analysis.insights.length > 0 ? (
+                <ul className="space-y-3">
 
-                {analysis.insights?.map((insight: string, index: number) => (
+                  {analysis.insights.map(
+                    (insight, index) => (
+                      <li
+                        key={index}
+                        className="rounded-xl border border-cyan-500/20 bg-slate-800 p-4 text-slate-300"
+                      >
+                        • {insight}
+                      </li>
+                    )
+                  )}
 
-                  <li
-                    key={index}
-                    className="rounded-xl border border-cyan-500/20 bg-slate-800 p-4"
-                  >
-                    • {insight}
-                  </li>
-
-                ))}
-
-              </ul>
+                </ul>
+              ) : (
+                <p className="text-slate-500">
+                  No insights available.
+                </p>
+              )}
 
             </div>
 
-            {/* Timeline */}
+            {/* REAL AI TIMELINE */}
 
-            {analysis.timeline?.length > 0 && (
+            {analysis.timeline &&
+              analysis.timeline.length > 0 && (
 
-              <div className="mb-10">
+                <div className="mb-10">
 
-                <h3 className="mb-4 text-xl font-bold text-cyan-400">
-                  Investigation Timeline
-                </h3>
+                  <div className="mb-4 flex items-center justify-between">
 
-                <div className="space-y-4">
+                    <h3 className="text-xl font-bold text-cyan-400">
+                      Investigation Timeline
+                    </h3>
 
-                  {analysis.timeline.map((item: any, index: number) => (
+                    <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs text-green-400">
+                      AI Generated
+                    </span>
 
-                    <div
-                      key={index}
-                      className="rounded-xl border border-cyan-500/20 bg-slate-800 p-5"
-                    >
+                  </div>
 
-                      <p className="font-bold text-cyan-300">
-                        {item.date}
-                      </p>
+                  <div className="space-y-4">
 
-                      <p className="mt-2 text-slate-300">
-                        {item.event}
-                      </p>
+                    {analysis.timeline.map(
+                      (item, index) => (
 
-                    </div>
+                        <div
+                          key={`${item.date}-${index}`}
+                          className="rounded-xl border border-cyan-500/20 bg-slate-800 p-5"
+                        >
 
-                  ))}
+                          <p className="font-bold text-cyan-300">
+                            {item.date}
+                          </p>
+
+                          <p className="mt-2 text-slate-300">
+                            {item.event}
+                          </p>
+
+                        </div>
+
+                      )
+                    )}
+
+                  </div>
 
                 </div>
+              )}
 
-              </div>
-
-            )}
-
-            {/* Chat With Evidence */}
+            {/* -------------------------------------- */}
+            {/* CHAT WITH EVIDENCE */}
+            {/* -------------------------------------- */}
 
             <div className="mt-10">
 
@@ -438,13 +562,20 @@ export default function Evidence() {
                   onChange={(e) =>
                     setQuestion(e.target.value)
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleChat();
+                    }
+                  }}
                   placeholder="Ask anything about the uploaded evidence..."
                   className="flex-1 rounded-xl bg-slate-800 p-4 outline-none"
                 />
 
                 <button
+                  type="button"
                   onClick={handleChat}
-                  className="rounded-xl bg-cyan-500 px-6 transition hover:bg-cyan-600"
+                  disabled={!question.trim()}
+                  className="rounded-xl bg-cyan-500 px-6 transition hover:bg-cyan-600 disabled:opacity-50"
                 >
                   <Send size={22} />
                 </button>
@@ -452,7 +583,6 @@ export default function Evidence() {
               </div>
 
               {answer && (
-
                 <div className="mt-6 rounded-xl bg-slate-800 p-5">
 
                   <p className="text-slate-300">
@@ -460,31 +590,29 @@ export default function Evidence() {
                   </p>
 
                 </div>
-
               )}
 
             </div>
 
-            {/* Download Report */}
+            {/* -------------------------------------- */}
+            {/* DOWNLOAD REPORT */}
+            {/* -------------------------------------- */}
 
             <button
+              type="button"
               onClick={handleDownload}
               className="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 py-4 text-lg font-bold transition hover:scale-105"
             >
               <Download size={22} />
 
               Download Investigation Report
-
             </button>
 
           </div>
-
         )}
 
       </div>
 
     </div>
-
   );
-
 }

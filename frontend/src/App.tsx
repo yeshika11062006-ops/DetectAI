@@ -20,12 +20,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-
-        {/* Authentication */}
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Protected Pages */}
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/cases" element={<Cases />} />
@@ -39,9 +36,7 @@ export default function App() {
           <Route path="/test" element={<Test />} />
         </Route>
 
-        {/* 404 */}
         <Route path="*" element={<NotFound />} />
-
       </Routes>
     </BrowserRouter>
   );

@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 
 export default function Login() {
-  
   const navigate = useNavigate();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -27,31 +26,32 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-const handleLogin = async () => {
-  try {
-    setLoading(true);
-    setError("");
+  const handleLogin = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-    const data = await login(email, password);
+      console.log("Sending login request...");
 
-    alert("Login successful!");
-    alert(JSON.stringify(data));
+      const data = await login(email, password);
 
-    localStorage.setItem("token", data.access_token);
+      console.log("Login Success:", data);
 
-    navigate("/dashboard");
-  } catch (err: any) {
-    console.log(err);
+      localStorage.setItem("token", data.access_token);
 
-    alert("ERROR");
-    alert(JSON.stringify(err.response?.data));
-    alert(err.message);
+      navigate("/dashboard");
+    } catch (err: any) {
+      console.error(err);
 
-    setError(err.response?.data?.detail || err.message || "Login failed");
-  } finally {
-    setLoading(false);
-  }
-};
+      if (err.response) {
+        setError(err.response.data.detail);
+      } else {
+        setError(err.message || "Network Error");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-white">
@@ -62,7 +62,7 @@ const handleLogin = async () => {
 
       <div className="relative z-10 flex min-h-screen items-center justify-center px-8 py-16">
 
-        <div className="grid max-w-7xl w-full gap-16 lg:grid-cols-2 items-center">
+        <div className="grid w-full max-w-7xl gap-16 lg:grid-cols-2 items-center">
 
           {/* LEFT */}
 
@@ -157,107 +157,108 @@ const handleLogin = async () => {
             </div>
 
           </div>
-                    {/* RIGHT */}
 
+          {/* RIGHT LOGIN CARD */}
           <div className="rounded-[40px] border border-white/10 bg-white/10 p-10 backdrop-blur-2xl shadow-2xl">
 
-            <h2 className="text-4xl font-black">
-              Investigator Login
-            </h2>
+  <h2 className="text-4xl font-black">
+    Investigator Login
+  </h2>
 
-            <p className="mt-3 text-gray-400">
-              Secure access to your AI workspace
-            </p>
+  <p className="mt-3 text-gray-400">
+    Secure access to your AI workspace
+  </p>
 
-            <div className="mt-10 space-y-6">
+  <div className="mt-10 space-y-6">
 
-              <Input
-                icon={<Mail />}
-                placeholder="Email Address"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+    <Input
+      icon={<Mail />}
+      placeholder="Email Address"
+      type="email"
+      value={email}
+      onChange={(e) => setEmail(e.target.value)}
+    />
 
-              <div className="flex items-center rounded-2xl bg-white px-5">
+    <div className="flex items-center rounded-2xl bg-white px-5">
 
-                <Lock className="text-purple-600" />
+      <Lock className="text-purple-600" />
 
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent p-5 text-black outline-none"
-                />
+      <input
+        type={showPassword ? "text" : "password"}
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        className="w-full bg-transparent p-5 text-black outline-none"
+      />
 
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff /> : <Eye />}
-                </button>
+      <button
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+      >
+        {showPassword ? <EyeOff /> : <Eye />}
+      </button>
 
-              </div>
+    </div>
 
-              {error && (
-                <div className="rounded-xl border border-red-500 bg-red-500/20 p-3 text-red-300">
-                  {error}
-                </div>
-              )}
+    {error && (
+      <div className="rounded-xl border border-red-500 bg-red-500/20 p-3 text-red-300">
+        {error}
+      </div>
+    )}
 
-              <div className="flex justify-between text-sm text-slate-300">
+    <div className="flex justify-between text-sm text-slate-300">
 
-                <label>
-                  <input
-                    type="checkbox"
-                    className="mr-2"
-                  />
-                  Remember me
-                </label>
+      <label>
+        <input
+          type="checkbox"
+          className="mr-2"
+        />
+        Remember me
+      </label>
 
-                <button
-                  type="button"
-                  className="text-cyan-300"
-                >
-                  Forgot Password?
-                </button>
+      <button
+        type="button"
+        className="text-cyan-300"
+      >
+        Forgot Password?
+      </button>
 
-              </div>
+    </div>
 
-              <button
-                onClick={handleLogin}
-                disabled={loading}
-                className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 py-5 text-xl font-bold transition hover:scale-105 disabled:opacity-50"
-              >
+    <button
+      onClick={handleLogin}
+      disabled={loading}
+      className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 py-5 text-xl font-bold transition hover:scale-105 disabled:opacity-50"
+    >
 
-                {loading ? "Signing In..." : "Enter DetectAI"}
+      {loading ? "Signing In..." : "Enter DetectAI"}
 
-                <ArrowRight className="transition group-hover:translate-x-1" />
+      <ArrowRight className="transition group-hover:translate-x-1" />
 
-              </button>
+    </button>
 
-            </div>
+  </div>
 
-            <div className="mt-10 grid grid-cols-3 gap-5">
+  <div className="mt-10 grid grid-cols-3 gap-5">
 
-              <Stat
-                number="24+"
-                label="Cases"
-              />
+    <Stat
+      number="24+"
+      label="Cases"
+    />
 
-              <Stat
-                number="118"
-                label="Evidence"
-              />
+    <Stat
+      number="118"
+      label="Evidence"
+    />
 
-              <Stat
-                number="96%"
-                label="Accuracy"
-              />
-              <div className="mt-8 text-center">
+    <Stat
+      number="96%"
+      label="Accuracy"
+    />
 
-  <p className="text-slate-400">
+  </div>
+
+  <div className="mt-8 text-center">
 
     Don't have an account?
 
@@ -268,23 +269,18 @@ const handleLogin = async () => {
       Create Account
     </Link>
 
-  </p>
+  </div>
 
 </div>
 
-            </div>
+</div>
 
-          </div>
+</div>
 
-        </div>
-
-      </div>
-
-    </div>
-    
-
-  );
+</div>
+);
 }
+
 function Input({
   icon,
   placeholder,
@@ -299,8 +295,8 @@ function Input({
   onChange: React.ChangeEventHandler<HTMLInputElement>;
 }) {
   return (
-    <div className="flex items-center rounded-2xl bg-white px-5 shadow-lg">
-      <div className="text-blue-600">{icon}</div>
+    <div className="flex items-center rounded-2xl bg-white px-5">
+      <div className="text-purple-600">{icon}</div>
 
       <input
         type={type}
@@ -340,7 +336,7 @@ function FeatureCard({
     <div
       className={`rounded-3xl border bg-gradient-to-br p-7 backdrop-blur-xl transition duration-300 hover:-translate-y-2 hover:shadow-2xl ${colors[color]}`}
     >
-      <div>{icon}</div>
+      {icon}
 
       <h3 className="mt-5 text-xl font-bold">
         {title}
@@ -357,8 +353,8 @@ function Stat({
   label: string;
 }) {
   return (
-    <div className="rounded-2xl bg-white/5 p-5 text-center backdrop-blur-lg">
-      <h3 className="text-3xl font-black text-cyan-300">
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
+      <h3 className="text-3xl font-black text-cyan-400">
         {number}
       </h3>
 

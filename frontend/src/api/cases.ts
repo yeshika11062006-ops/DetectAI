@@ -5,7 +5,10 @@ export async function getCases() {
   return response.data;
 }
 
-export async function createCase(title: string, description: string) {
+export async function createCase(
+  title: string,
+  description: string
+) {
   const response = await api.post("/cases", {
     title,
     description,
